@@ -1,0 +1,32 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Environment variables & config
+.env
+*.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Kaggle datasets (optional: keep locally, don’t push)
+data/
+*.csv
+
+# Logs
+*.log
+
+# IDE settings
+.vscode/
+.idea/
