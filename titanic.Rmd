@@ -31,7 +31,7 @@ table(train$Survived)
 # view proportion  for passengers who survived.
 prop.table(table(train$Survived))
 ```
-### Assumen everyone dies in our test dataframe
+### Assume everyone dies in our test dataframe
 
 ```{r}
 test$Survived <- rep(0, 418)
@@ -44,6 +44,23 @@ submit <- data.frame(PassengerId = test$PassengerId, Survived = test$Survived)
 
 write.csv(submit, file = "theyallperish.csv", row.names = FALSE)
 
+```
+
+### Look at the gender of the passengers. Women and children were most likely to be saved first. Look at the propotion of survival based on gender. It's evident more women survived.
+
+```{r}
+table(train$Sex)
+
+prop.table(table(train$Sex, train$Survived),1)
+```
+### In the test df we mark women as survivors
+
+```{r}
+test$Survived[test$Sex == 'female'] <- 1
+
+all_women_survive <- data.frame(PassengerId = test$PassengerId, Survived = test$Survived)
+
+write.csv(all_women_survive, file = "allwomensurvive.csv", row.names = FALSE)
 ```
 
 
