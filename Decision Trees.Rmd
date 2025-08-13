@@ -1,0 +1,41 @@
+---
+title: "Decision Trees"
+author: "John Wangui"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(openintro)
+# Import rpart for “Recursive Partitioning and Regression Trees” and uses the CART decision tree algorithm.
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+```
+
+### Exercise 1
+
+use rpart to make a decision tree based on Pclass, sex, Age, number of siblings, number of parents, Fare and point of departure.
+
+```{r code-chunk-label}
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+               data=train,
+               method="class")
+# Visualize the decision tree.
+fancyRpartPlot(fit)
+```
+
+### Exercise 2
+
+Here we have called rpart’s predict function. Here we point the function to the model’s fit object, which contains all of the decisions we see above, and tell it to work its magic on the test dataframe. No need to tell it which variables we originally used in the model-building phase, it automatically looks for them and will certainly let you know if something is wrong. Finally we tell it to again use the class method (for ones and zeros output) and as before write the output to a dataframe and submission file.
+
+```{r}
+Prediction <- predict(fit, test, type = "class")
+submit <- data.frame(PassengerId = test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "myfirstdtree.csv", row.names = FALSE)
+```
+
+...
+
