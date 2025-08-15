@@ -39,3 +39,27 @@ write.csv(submit, file = "myfirstdtree.csv", row.names = FALSE)
 
 ...
 
+### Exercise 3
+
+Allow the decision tree to grow to the max. This will cause overfitting and does not help our decision tree.
+```{r}
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+               data=train,
+               method="class", 
+               control=rpart.control(minsplit=2, cp=0))
+fancyRpartPlot(fit)
+
+```
+
+### Exercise 4
+ 
+
+Manually trim a decision tree
+```{r}
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked, data=train,
+             method="class", control=rpart.control(minsplit=2, cp=0.005))
+new.fit <- prp(fit,snip=TRUE)$obj
+fancyRpartPlot(new.fit)
+
+```
+
