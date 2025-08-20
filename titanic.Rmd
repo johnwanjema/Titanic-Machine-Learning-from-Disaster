@@ -14,9 +14,9 @@ library(openintro)
 
 ```{r code-chunk-label}
 
-train <- read.csv("~/projects/r/titanic/train.csv")
+train <- read.csv("~/projects/r/titanic/csv/train.csv")
 
-test <- read.csv("~/projects/r/titanic/test.csv")
+test <- read.csv("~/projects/r/titanic/csv/test.csv")
 
 # view structure  of the dataframe
 str(train)
