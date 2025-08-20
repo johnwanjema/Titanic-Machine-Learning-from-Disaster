@@ -63,3 +63,80 @@ fancyRpartPlot(new.fit)
 
 ```
 
+### Exercise 4
+
+Explore the passenger names we see many more titles including Miss, Mrs, Master, and even the Countess! 
+```{r}
+# combine test and test dataframes
+test$Survived <- NA
+combi <- rbind(train, test)
+
+
+combi$Name[1]
+
+strsplit(combi$Name[1], split='[,.]')
+strsplit(combi$Name[1], split='[,.]')[[1]][2]
+
+combi$Title <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][2]})
+
+combi$Title <- sub(' ', '', combi$Title)
+
+table(combi$Title)
+
+combi$Title[combi$Title %in% c('Mme', 'Mlle')] <- 'Mlle'
+
+combi$Title[combi$Title %in% c('Capt', 'Don', 'Major', 'Sir')] <- 'Sir'
+
+combi$Title[combi$Title %in% c('Dona', 'Lady', 'the Countess', 'Jonkheer')] <- 'Lady'
+
+combi$Title <- factor(combi$Title)
+```
+
+### Exercise 5
+There’s those two variables SibSb and Parch that indicate the number of family members the passenger is travelling with.
+
+```{r}
+# Engineered variable: Family size
+combi$FamilySize <- combi$SibSp + combi$Parch + 1
+```
+
+### Exercise 6
+# Engineered variable: Family
+```{r}
+
+combi$Surname <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][1]})
+combi$FamilyID <- paste(as.character(combi$FamilySize), combi$Surname, sep="")
+combi$FamilyID[combi$FamilySize <= 2] <- 'Small'
+
+table(combi$FamilyID)
+
+# Delete erroneous family IDs
+famIDs <- data.frame(table(combi$FamilyID))
+famIDs <- famIDs[famIDs$Freq <= 2,]
+combi$FamilyID[combi$FamilyID %in% famIDs$Var1] <- 'Small'
+# Convert to a factor
+combi$FamilyID <- factor(combi$FamilyID)
+```
+
+```{r}
+# Split back into test and train sets
+train <- combi[1:891,]
+test <- combi[892:1309,]
+```
+
+```{r}
+# Build a new tree with our new features
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title + FamilySize + FamilyID,
+             data=train, method="class")
+fancyRpartPlot(fit)
+
+```
+
+```{r}
+# Now let's make a prediction and write a submission file
+Prediction <- predict(fit, test, type = "class")
+submit <- data.frame(PassengerId = test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "engineeredfeaturestree.csv", row.names = FALSE)
+```
+
+
