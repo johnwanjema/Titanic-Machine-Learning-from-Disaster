@@ -1,0 +1,142 @@
+---
+title: "Decision Trees"
+author: "John Wangui"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(openintro)
+# Import rpart for “Recursive Partitioning and Regression Trees” and uses the CART decision tree algorithm.
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+```
+
+### Exercise 1
+
+use rpart to make a decision tree based on Pclass, sex, Age, number of siblings, number of parents, Fare and point of departure.
+
+```{r code-chunk-label}
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+               data=train,
+               method="class")
+# Visualize the decision tree.
+fancyRpartPlot(fit)
+```
+
+### Exercise 2
+
+Here we have called rpart’s predict function. Here we point the function to the model’s fit object, which contains all of the decisions we see above, and tell it to work its magic on the test dataframe. No need to tell it which variables we originally used in the model-building phase, it automatically looks for them and will certainly let you know if something is wrong. Finally we tell it to again use the class method (for ones and zeros output) and as before write the output to a dataframe and submission file.
+
+```{r}
+Prediction <- predict(fit, test, type = "class")
+submit <- data.frame(PassengerId = test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "myfirstdtree.csv", row.names = FALSE)
+```
+
+...
+
+### Exercise 3
+
+Allow the decision tree to grow to the max. This will cause overfitting and does not help our decision tree.
+```{r}
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+               data=train,
+               method="class", 
+               control=rpart.control(minsplit=2, cp=0))
+fancyRpartPlot(fit)
+
+```
+
+### Exercise 4
+ 
+
+Manually trim a decision tree
+```{r}
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked, data=train,
+             method="class", control=rpart.control(minsplit=2, cp=0.005))
+new.fit <- prp(fit,snip=TRUE)$obj
+fancyRpartPlot(new.fit)
+
+```
+
+### Exercise 4
+
+Explore the passenger names we see many more titles including Miss, Mrs, Master, and even the Countess! 
+```{r}
+# combine test and test dataframes
+test$Survived <- NA
+combi <- rbind(train, test)
+
+
+combi$Name[1]
+
+strsplit(combi$Name[1], split='[,.]')
+strsplit(combi$Name[1], split='[,.]')[[1]][2]
+
+combi$Title <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][2]})
+
+combi$Title <- sub(' ', '', combi$Title)
+
+table(combi$Title)
+
+combi$Title[combi$Title %in% c('Mme', 'Mlle')] <- 'Mlle'
+
+combi$Title[combi$Title %in% c('Capt', 'Don', 'Major', 'Sir')] <- 'Sir'
+
+combi$Title[combi$Title %in% c('Dona', 'Lady', 'the Countess', 'Jonkheer')] <- 'Lady'
+
+combi$Title <- factor(combi$Title)
+```
+
+### Exercise 5
+There’s those two variables SibSb and Parch that indicate the number of family members the passenger is travelling with.
+
+```{r}
+# Engineered variable: Family size
+combi$FamilySize <- combi$SibSp + combi$Parch + 1
+```
+
+### Exercise 6
+# Engineered variable: Family
+```{r}
+
+combi$Surname <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][1]})
+combi$FamilyID <- paste(as.character(combi$FamilySize), combi$Surname, sep="")
+combi$FamilyID[combi$FamilySize <= 2] <- 'Small'
+
+table(combi$FamilyID)
+
+# Delete erroneous family IDs
+famIDs <- data.frame(table(combi$FamilyID))
+famIDs <- famIDs[famIDs$Freq <= 2,]
+combi$FamilyID[combi$FamilyID %in% famIDs$Var1] <- 'Small'
+# Convert to a factor
+combi$FamilyID <- factor(combi$FamilyID)
+```
+
+```{r}
+# Split back into test and train sets
+train <- combi[1:891,]
+test <- combi[892:1309,]
+```
+
+```{r}
+# Build a new tree with our new features
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title + FamilySize + FamilyID,
+             data=train, method="class")
+fancyRpartPlot(fit)
+
+```
+
+```{r}
+# Now let's make a prediction and write a submission file
+Prediction <- predict(fit, test, type = "class")
+submit <- data.frame(PassengerId = test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "engineeredfeaturestree.csv", row.names = FALSE)
+```
+
+

@@ -14,9 +14,9 @@ library(openintro)
 
 ```{r code-chunk-label}
 
-train <- read.csv("~/projects/r/titanic/train.csv")
+train <- read.csv("~/projects/r/titanic/csv/train.csv")
 
-test <- read.csv("~/projects/r/titanic/test.csv")
+test <- read.csv("~/projects/r/titanic/csv/test.csv")
 
 # view structure  of the dataframe
 str(train)
@@ -63,4 +63,46 @@ all_women_survive <- data.frame(PassengerId = test$PassengerId, Survived = test$
 write.csv(all_women_survive, file = "allwomensurvive.csv", row.names = FALSE)
 ```
 
+###  let’s start digging into the age variable now
+
+```{r}
+summary(train$Age)
+
+train$Child <- 0
+train$Child[train$Age < 18] <- 1
+
+aggregate(Survived ~ Child + Sex, data=train, FUN=length)
+
+# Get propotion of survivors
+aggregate(Survived ~ Child + Sex, data=train, FUN=function(x) {sum(x)/length(x)})
+```
+
+
+###  let’s look at the fares
+
+Let’s bin the fares into less than $10, between $10 and $20, $20 to $30 and more than $30 and store it to a new variable:
+
+```{r}
+train$Fare2 <- '30+'
+train$Fare2[train$Fare < 30 & train$Fare >= 20] <- '20-30'
+train$Fare2[train$Fare < 20 & train$Fare >= 10] <- '10-20'
+train$Fare2[train$Fare < 10] <- '<10'
+
+
+```
+
+```{r}
+aggregate(Survived ~ Fare2 + Pclass + Sex, data=train, FUN=function(x) {sum(x)/length(x)})
+
+```
+```{r}
+test$Survived <- 0
+test$Survived[test$Sex == 'female'] <- 1
+test$Survived[test$Sex == 'female' & test$Pclass == 3 & test$Fare >= 20] <- 0
+
+
+submit <- data.frame(PassengerId = test$PassengerId, Survived = test$Survived)
+
+write.csv(submit, file = "womwen_in_third_class_die.csv", row.names = FALSE)
+```
 

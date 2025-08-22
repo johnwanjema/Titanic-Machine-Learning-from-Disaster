@@ -1,0 +1,159 @@
+---
+title: "Titanic - Machine Learning from Disaster "
+author: "John Wangui"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(openintro)
+library(rpart)
+library(randomForest)
+library(party)
+```
+
+### Exercise 1
+
+```{r code-chunk-label}
+train <- read.csv("~/projects/r/titanic/csv/train.csv")
+
+test <- read.csv("~/projects/r/titanic/csv/test.csv")
+
+# Join together the test and train sets for easier feature engineering
+test$Survived <- NA
+combi <- rbind(train, test)
+
+# Convert name to a string
+combi$Name <- as.character(combi$Name)
+```
+
+### Exercise 2
+
+Engineered variable: Title
+
+```{r}
+combi$Title <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][2]})
+combi$Title <- sub(' ', '', combi$Title)
+# Combine small title groups
+combi$Title[combi$Title %in% c('Mme', 'Mlle')] <- 'Mlle'
+combi$Title[combi$Title %in% c('Capt', 'Don', 'Major', 'Sir')] <- 'Sir'
+combi$Title[combi$Title %in% c('Dona', 'Lady', 'the Countess', 'Jonkheer')] <- 'Lady'
+# Convert to a factor
+combi$Title <- factor(combi$Title)
+```
+
+### Exercise 3
+
+Engineered variable: Family size
+
+```{r}
+combi$FamilySize <- combi$SibSp + combi$Parch + 1
+
+combi$Surname <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][1]})
+combi$FamilyID <- paste(as.character(combi$FamilySize), combi$Surname, sep="")
+combi$FamilyID[combi$FamilySize <= 2] <- 'Small'
+
+# Delete erroneous family IDs
+famIDs <- data.frame(table(combi$FamilyID))
+famIDs <- famIDs[famIDs$Freq <= 2,]
+combi$FamilyID[combi$FamilyID %in% famIDs$Var1] <- 'Small'
+# Convert to a factor
+combi$FamilyID <- factor(combi$FamilyID)
+```
+
+### Exercise 4
+ 
+Fill in Age NAs
+
+```{r}
+
+summary(combi$Age)
+Agefit <- rpart(Age ~ Pclass + Sex + SibSp + Parch + Fare + Embarked + Title + FamilySize, 
+                data=combi[!is.na(combi$Age),], method="anova")
+combi$Age[is.na(combi$Age)] <- predict(Agefit, combi[is.na(combi$Age),])
+# Check what else might be missing
+summary(combi)
+# Fill in Embarked blanks
+summary(combi$Embarked)
+which(combi$Embarked == '')
+combi$Embarked[c(62,830)] = "S"
+combi$Embarked <- factor(combi$Embarked)
+# Fill in Fare NAs
+summary(combi$Fare)
+which(is.na(combi$Fare))
+combi$Fare[1044] <- median(combi$Fare, na.rm=TRUE)
+```
+
+### Exercise 5
+
+New factor for Random Forests, only allowed <32 levels, so reduce number
+
+```{r}
+combi$FamilyID2 <- combi$FamilyID
+# Convert back to string
+combi$FamilyID2 <- as.character(combi$FamilyID2)
+combi$FamilyID2[combi$FamilySize <= 3] <- 'Small'
+# And convert back to factor
+combi$FamilyID2 <- factor(combi$FamilyID2)
+
+```
+
+### Exercise 5
+
+Split back into test and train sets
+
+```{r}
+
+train <- combi[1:891,]
+test <- combi[892:1309,]
+```
+
+### Exercise 6
+
+Build Random Forest Ensemble
+
+```{r}
+set.seed(415)
+fit <- randomForest(as.factor(Survived) ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title + FamilySize + FamilyID2,
+                    data=train, importance=TRUE, ntree=2000)
+# Look at variable importance
+varImpPlot(fit)
+# Now let's make a prediction and write a submission file
+Prediction <- predict(fit, test)
+submit <- data.frame(PassengerId = test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "firstforest.csv", row.names = FALSE)
+```
+
+### Exercise 7
+
+Build condition inference tree Random Forest
+```{r}
+set.seed(415)
+
+# Convert categorical variables to factors
+train$Sex <- as.factor(train$Sex)
+test$Sex  <- as.factor(test$Sex)
+
+train$Embarked <- as.factor(train$Embarked)
+test$Embarked  <- as.factor(test$Embarked)
+
+train$Title <- as.factor(train$Title)
+test$Title  <- as.factor(test$Title)
+
+train$FamilyID <- as.factor(train$FamilyID)
+test$FamilyID  <- as.factor(test$FamilyID)
+
+train$Survived <- as.factor(train$Survived)  
+
+
+fit <- cforest(as.factor(Survived) ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title + FamilySize + FamilyID,
+               data = train, controls=cforest_unbiased(ntree=2000, mtry=3)) 
+# Now let's make a prediction and write a submission file
+Prediction <- predict(fit,  newdata = test, OOB=TRUE, type = "response")
+submit <- data.frame(PassengerId = test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "ciforest.csv", row.names = FALSE)
+```
+
+
+
